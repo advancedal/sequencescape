@@ -74,7 +74,7 @@ class AssetShape < ApplicationRecord
   def alternate_position(well_position, size, *dimensions)
     return nil unless Map.valid_well_position?(well_position)
 
-    divisor, multiplier = dimensions.map { |n| send("plate_#{n}", size) }
+    divisor, multiplier = dimensions.map { |key| send("plate_#{key}", size) }
     column, row = (well_position - 1).divmod(divisor)
     return nil unless (0...multiplier).cover?(column)
     return nil unless (0...divisor).cover?(row)
@@ -84,6 +84,12 @@ class AssetShape < ApplicationRecord
 
   def location_from_row_and_column(row, column, size = 96)
     description_strategy.constantize.location_from_row_and_column(row, column, plate_width(size), size)
+  end
+
+  def compatible_with_size?(size)
+    return false unless ((size % horizontal_ratio) == 0)
+    return false unless (((size / horizontal_ratio) % vertical_ratio) == 0)
+    true
   end
 
   private

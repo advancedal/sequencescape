@@ -17,19 +17,20 @@ module Cherrypick
       attr_accessor :partial_plate_positions
 
       validates_presence_of :size, :shape, :requests, :requests_positions
-      validates_presence_of :control_positions, if: :control_requests
-      validates_presence_of :control_requests, if: :control_positions
+      validates_presence_of :control_positions, if: :has_controls_params
+      validates_presence_of :control_requests, if: :has_controls_params
       validate :same_requests_size_and_positions_size
       validate :same_controls_size_and_controls_positions_size
       validate :no_clash_between_positions
       validate :enough_space
+      validate :size_compatible_with_shape
       
       
       def render(position)
         return TEMPLATE_EMPTY_WELL if template_positions.include?(position)
-        return EMPTY_WELL if partial_plate_positions.include?(position)        
         return render_request(control_requests[control_positions.find_index(position)]) if control_positions.include?(position)
-        render_request(requests[requests_positions.find_index(position)])
+        return render_request(requests[requests_positions.find_index(position)]) if requests_positions.include?(position)
+        EMPTY_WELL
       end
 
       def render_request(request)
@@ -37,7 +38,9 @@ module Cherrypick
       end
 
       def by_column
-        size.times.map {|p| render(shape.vertical_to_horizontal(p+1, size))}
+        size.times.map do |p| 
+          render(shape.vertical_to_horizontal(p+1, size))
+        end
         #shape.vertical_to_horizontal(requests.length + 1, size).map {|p| render(p)}
       end
 
@@ -47,7 +50,7 @@ module Cherrypick
 
       # Like the bishop in chess
       def by_interleaced_column
-        size.times.map {|p| render(shape.interlaced_vertical_to_horizontal(p+1, size))}
+        size.times.map {|p| render(shape.interlaced_vertical_to_horizontal(p, size))}
         #shape.interlaced_vertical_to_horizontal(requests.length + 1, size)
       end
 
@@ -83,6 +86,16 @@ module Cherrypick
         size_for_controls = control_requests ? control_requests.length : 0
         return if requests.length + size_for_controls <= size
         errors.add(:size, "There are not enough space to allocate requests and control requests")
+      end
+
+      def size_compatible_with_shape
+        return unless size && shape
+        return if shape.compatible_with_size?(size)
+        errors.add(:shape, "Shape and size provided are not compatible")
+      end
+
+      def has_controls_params
+        (control_requests && control_requests.length > 0) || (control_positions && control_positions.length > 0)
       end
     end
   end

@@ -3,22 +3,25 @@ module Cherrypick
     class PlateLayoutProcessor
       include ActiveModel::Model
 
-      attr_accessor :batch, :size, :shape
+      attr_accessor :size, :shape
       attr_accessor :control_plate, :partial_plate, :template_plate
       attr_accessor :requests
 
+      validates_presence_of :batch, :size, :shape, :requests
+      validate :all_plates_valid
+
       def plates
-        @plates ||= total_plates.times.map do |num_plate| 
-          PlateLayout.new({
+        @plates ||= total_plates.times.map do |num_plate|
+          PlateLayoutRenderer.new(
             shape: shape,
             size: size,
             requests: requests_for_plate[num_plate], 
-            control_requests: control_requests_for_plate[num_plate],
+            requests_positions: allocated_requests_positions(num_plate),
+            control_requests: control_requests_for_plate(num_plate),
             control_positions: control_positions(num_plate),
-            requests_positions: requests_positions(num_plate),
             template_positions: template_positions(num_plate),
             partial_plate_positions: partial_plate_positions(num_plate)
-          })
+          )
         end
       end
 
@@ -26,7 +29,8 @@ module Cherrypick
         requests.first.batch
       end
 
-      def control_requests_for_plate
+      def control_requests_for_plate(num_plate)
+        return [] unless control_plate
         return @control_requests_for_plate if @control_requests_for_plate
         @control_requests_for_plate = []
 
@@ -35,6 +39,7 @@ module Cherrypick
             find_or_create_control_request(control_well)
           end
         end
+        @control_requests_for_plate[num_plate]
       end
 
       def find_or_create_control_request(control_well)
@@ -59,6 +64,7 @@ module Cherrypick
       end
 
       def control_wells
+        return [] unless @control_plate
         @control_wells ||= @control_plate.wells.joins(aliquots: :sample).where(samples: { control: true})
       end
 
@@ -69,8 +75,9 @@ module Cherrypick
         remaining_requests = requests.to_a
         num_plate = 0
         while (remaining_requests.length != 0) do
-          @requests_for_plate.push([remaining_requests.pop(requests_positions(num_plate).length)])
+          @requests_for_plate.push(remaining_requests.shift(available_requests_positions(num_plate).length))
           num_plate = num_plate + 1
+          errors.add(:base, 'Max limit of cherrypicking is 99 plates') if num_plate > 99
         end
 
         return @requests_for_plate
@@ -88,18 +95,22 @@ module Cherrypick
         all_positions - partial_plate_positions(num_plate) - template_positions(num_plate)
       end
 
-      def requests_positions(num_plate)
+      def available_requests_positions(num_plate)
         available_positions(num_plate) - control_positions(num_plate)
       end
 
+      def allocated_requests_positions(num_plate)
+        available_requests_positions(num_plate).shift(requests_for_plate[num_plate].length)
+      end
+
       def partial_plate_positions(num_plate)
-        return [] unless @partial_plate
+        return [] unless partial_plate
         return [] unless num_plate == 0
         @partial_plate.wells.where(aliquots: nil).map(&:map_id)
       end
 
       def template_positions(num_plate)
-        return [] unless @plate_template
+        return [] unless template_plate
         @template_plate.wells.map(&:map_id)
       end
 
@@ -107,12 +118,14 @@ module Cherrypick
       # Returns a list with the destination positions for the control wells distributed by
       # using batch_id and num_plate as position generators.
       def control_positions(num_plate)
+        return [] unless control_plate
+
         unique_number = batch.id
         free_wells = available_positions(num_plate)
 
         # Generation of the choice
         positions = []
-
+        binding.pry
         while positions.length < control_wells.length
           current_size = free_wells.length
           position = free_wells.slice!(unique_number % current_size)
@@ -122,6 +135,17 @@ module Cherrypick
         end
 
         positions
+      end
+
+      protected
+      def all_plates_valid
+        return if plates.all?(&:valid?)
+
+        plates.each_with_index do |plate, pos|
+          plate.errors.messages.each do |k, v|
+            errors.add("plate_#{pos}_#{k}", v)
+          end
+        end
       end
 
       private
