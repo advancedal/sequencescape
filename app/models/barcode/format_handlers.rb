@@ -285,7 +285,7 @@ module Barcode::FormatHandlers
   class Glasgow < BaseRegExBarcode
     self.format = /\A(?<prefix>GLA)(?<number>[0-9]{6})(?<suffix>R)\z/
   end
-  
+
   # Added to support plates from vaccine samples (GPL-743)
   # as part of project Heron
   # Expected formats:
@@ -294,7 +294,6 @@ module Barcode::FormatHandlers
   class GlasgowVaccine < BaseRegExBarcode
     self.format = /\A(?<prefix>GLA[A-Za-z]{3})(?<number>[0-9]{3})(?<suffix>R)\z/
   end
-  
 
   # Added to support plates from Cambridge AZ
   # as part of project Heron

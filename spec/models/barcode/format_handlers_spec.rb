@@ -112,7 +112,6 @@ describe Barcode::FormatHandlers do
     it_has_an_invalid_barcode 'GLA1234567R'
   end
 
-
   describe Barcode::FormatHandlers::GlasgowVaccine do
     it_has_a_valid_barcode 'GLAVAC123R', prefix: 'GLAVAC', number: 123, suffix: 'R'
     it_has_a_valid_barcode 'GLAVAC001R', prefix: 'GLAVAC', number: 1, suffix: 'R'
