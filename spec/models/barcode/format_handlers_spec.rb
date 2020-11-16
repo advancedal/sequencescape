@@ -112,6 +112,19 @@ describe Barcode::FormatHandlers do
     it_has_an_invalid_barcode 'GLA1234567R'
   end
 
+
+  describe Barcode::FormatHandlers::GlasgowVaccine do
+    it_has_a_valid_barcode 'GLAVAC123R', prefix: 'GLAVAC', number: 123, suffix: 'R'
+    it_has_a_valid_barcode 'GLAVAC001R', prefix: 'GLAVAC', number: 1, suffix: 'R'
+    it_has_a_valid_barcode 'GLAASD001R', prefix: 'GLAASD', number: 1, suffix: 'R'
+    it_has_an_invalid_barcode 'GLA-123456-R'
+    it_has_an_invalid_barcode 'GLA123456R '
+    it_has_an_invalid_barcode "GLA123456R\n1"
+    it_has_an_invalid_barcode 'GLA123456S'
+    it_has_an_invalid_barcode 'GLE123456R'
+    it_has_an_invalid_barcode 'GLA1234567R'
+  end
+
   describe Barcode::FormatHandlers::CambridgeAZ do
     it_has_a_valid_barcode '002107834', number: 2107834 # trims off the leading zeros
     it_has_a_valid_barcode '1087739333', number: 1087739333
