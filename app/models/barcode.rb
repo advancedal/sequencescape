@@ -35,7 +35,8 @@ class Barcode < ApplicationRecord
     cgap_plate: 14,
     cgap_rack: 15,
     glasgow: 16,
-    cambridge_a_z: 17
+    cambridge_a_z: 17,
+    glasgow_vaccine: 18
   }
 
   # Barcode formats which may be submitted via sample manifests
